@@ -20,8 +20,6 @@ from msilib.schema import ListBox
 from warnings import catch_warnings
 from fbchat.models import *
 import json
-from nltk.sem.logic import Variable
-
 
 class PrintLogger(): # create file like object
     def __init__(self, labelText): # pass reference to text widget
@@ -38,8 +36,8 @@ def say(text):
     with tempfile.NamedTemporaryFile(delete=True) as temp:
         ttss = []
         flag = False
-        if len(re.findall(r'([a-zA-Z]+)', text)) == 0:
-            lang = langid.classify(text)[0]
+        lang = langid.classify(text)[0]
+        if lang == 'zh':
             if lang == 'zh':
                 lang = 'zh-tw'
                 flag = True
@@ -49,7 +47,10 @@ def say(text):
             except:
                 ttss.append(gTTS(text))
         else:
-            ttss.append(gTTS(text))
+            try:
+                ttss.append(gTTS(text,lang))
+            except:
+                ttss.append(gTTS(text))
         filename = "{}.mp3".format(temp.name)
         with open(filename, 'wb') as fp:
             for tts in ttss:
@@ -71,7 +72,6 @@ class EchoBot(Client):
         text = message_object.text
         if text == "":
             return
-        #if True:
         if author_id != self.uid:
             if author_id in self.idName:
                 name = self.idName[author_id]
@@ -84,7 +84,7 @@ class EchoBot(Client):
                 self.msglist.insert(END, name+": "+text)
             except Exception as ex:
                 self.msglist.insert(END, name+": 訊息包含不支援之符號")
-            self.msglist.yveiw(END)
+            self.msglist.yview(END)
         else:
             if(message_object.text == 'Logout'):
                 self.logout()
