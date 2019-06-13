@@ -1,1 +1,6 @@
 config.json
+# PyInstaller
+/dist
+/build
+/__pycache__
+*.spec
