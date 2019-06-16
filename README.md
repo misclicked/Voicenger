@@ -3,6 +3,9 @@ Voicenger
 
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-360/)\
 Convert messenger incoming message to speech
+# Lastest Executable File
+[Lastest](https://github.com/misclicked/Voicenger/releases/latest)
+
 # install dependencies
 
 ```
