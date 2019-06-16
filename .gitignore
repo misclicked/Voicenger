@@ -3,4 +3,3 @@ config.json
 /dist
 /build
 /__pycache__
-*.spec

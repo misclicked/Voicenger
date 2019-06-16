@@ -1,10 +1,9 @@
 # coding=utf-8
-import re
 from gtts import gTTS
 import tempfile
-from pygame import mixer
+import playsound
 import langid
-from fbchat import Client
+from fbchat import Client, Message
 from bs4 import BeautifulSoup
 import requests
 import tkinter as tk
@@ -16,10 +15,8 @@ from tkinter import END
 import threading
 import logging
 import sys
-from msilib.schema import ListBox
-from warnings import catch_warnings
-from fbchat.models import *
 import json
+import threading
 
 class PrintLogger(): # create file like object
     def __init__(self, labelText): # pass reference to text widget
@@ -35,33 +32,26 @@ class PrintLogger(): # create file like object
 def say(text):
     with tempfile.NamedTemporaryFile(delete=True) as temp:
         ttss = []
-        flag = False
-        lang = langid.classify(text)[0]
-        if lang == 'zh':
+        try:
+            lang = langid.classify(text)[0]
             if lang == 'zh':
-                lang = 'zh-tw'
-                flag = True
-        if flag == True:
+                if lang == 'zh':
+                    lang = 'zh-tw'
+            ttss.append(gTTS(text,lang))
+        except:
             try:
-                ttss.append(gTTS(text,'zh-tw'))
-            except:
                 ttss.append(gTTS(text))
-        else:
-            try:
-                ttss.append(gTTS(text,lang))
             except:
-                ttss.append(gTTS(text))
+                ttss.append(gTTS('訊息太長，無法產生語音', 'zh-tw'))
         filename = "{}.mp3".format(temp.name)
         with open(filename, 'wb') as fp:
             for tts in ttss:
-                tts._tokenize = lambda text: [text]
-                tts.write_to_fp(fp)
-        mixer.init()
-        mixer.music.load(filename)
-        mixer.music.play()
-        while mixer.music.get_busy() == True:
-            continue
-        mixer.quit()
+                try:
+                    tts._tokenize = lambda text: [text]
+                    tts.write_to_fp(fp)
+                except:
+                    ttss.append(gTTS('訊息太長，無法產生語音', 'zh-tw'))
+        playsound.playsound(filename, False);
 
 # Subclass fbchat.Client and override required methods
 class EchoBot(Client):
@@ -72,7 +62,7 @@ class EchoBot(Client):
         text = message_object.text
         if text == "":
             return
-        if author_id != self.uid:
+        if (author_id != self.uid) or self.Debug:
             if author_id in self.idName:
                 name = self.idName[author_id]
             else:
@@ -84,6 +74,9 @@ class EchoBot(Client):
                 self.msglist.insert(END, name+": "+text)
             except Exception as ex:
                 self.msglist.insert(END, name+": 訊息包含不支援之符號")
+            if DNDStatus.get():
+                self.send(Message(text=DNDStr), thread_id=thread_id, thread_type=thread_type)
+
             self.msglist.yview(END)
         else:
             if(message_object.text == 'Logout'):
@@ -94,7 +87,7 @@ class EchoBot(Client):
 
 window = tk.Tk()
 window.title('Welcome to Voicenger')
-window.geometry('500x400')
+window.geometry('500x450')
 
 # welcome image
 canvas = tk.Canvas(window, height=200, width=500)
@@ -103,17 +96,44 @@ img = img.resize((200,200), Image.ANTIALIAS)
 image_file = ImageTk.PhotoImage(img)
 image = canvas.create_image(150,0, anchor='nw', image=image_file)
 canvas.pack(side='top')
-savedEmail = ""
-savedPwd = ""
-savedSaveOption = False
 try:
     with open('config.json') as json_file:  
         data = json.load(json_file)
-        savedEmail = data['config'][0]['email']
-        savedPwd = data['config'][0]['password']
-        savedSaveOption = data['config'][0]['save']
+        if 'config' not in data:
+            savedEmail = "example@gmail.com"
+            savedPwd = ""
+            savedSaveOption = False
+            DNDStr = "This user is now in DND mode."
+        else:
+            if 'email' not in data['config'][0]:
+                savedEmail = "example@gmail.com"
+            else:
+                savedEmail = data['config'][0]['email']
+            if 'password' not in data['config'][0]:
+                savedPwd = ""
+            else:
+                savedPwd = data['config'][0]['password']
+            if 'save' not in data['config'][0]:
+                savedSaveOption = False
+            else:
+                savedSaveOption = data['config'][0]['save']
+            if 'DNDStr' not in data['config'][0]:
+                DNDStr = "This user is now in DND mode."
+            else:
+                savedSaveOption = data['config'][0]['DNDStr']
+        if 'dev' not in data:
+            Debug = False
+        else:
+            if 'Debug' not in data['dev'][0]:
+                Debug = False
+            else:
+                Debug = data['dev'][0]['Debug']
 except:
     savedEmail = "example@gmail.com"
+    savedPwd = ""
+    savedSaveOption = False
+    Debug = False
+
 if savedEmail == "":
     savedEmail = "example@gmail.com"
     savedPwd = ""
@@ -133,9 +153,11 @@ var_usr_pwd.set(savedPwd)
 entry_usr_pwd = tk.Entry(window, textvariable=var_usr_pwd, show='*')
 entry_usr_pwd.place(x=205, y=290)
 
+
 def usr_login():
     def login():
         global client
+        global logined
         logined = False
         try:
             email = var_usr_name.get()
@@ -144,9 +166,10 @@ def usr_login():
             client.session = client.getSession()
             client.idName = {}
             client.msglist = msglist
+            client.Debug = Debug
             hideAll()
             frame.pack()
-            window.title('Welcome to Voicenger - logged as '+email)
+            window.title('Voicenger - Login as '+email)
             logined = True
             if saveStatus.get():
                 data = {}
@@ -154,8 +177,13 @@ def usr_login():
                 data['config'].append({
                     'email': email,
                     'password': pwd,
-                    'save': True
+                    'save': True,
+                    'DNDStr': DNDStr
                     })
+                data['dev'] = []
+                data['dev'].append({
+                    'Debug': Debug,
+                })
                 with open('config.json', 'w') as outfile:  
                     json.dump(data, outfile, indent=4)
             client.listen()
@@ -176,9 +204,13 @@ def usr_sign_up():
     url = "https://www.facebook.com/r.php"
     webbrowser.open_new_tab(url)
 def usr_logout():
-    tk.messagebox.showinfo(title='Info', message='Please Log out via sending a message \"Logout\" to yourself.')
-    url = "https://www.facebook.com/messages/t/"+client.uid
-    webbrowser.open_new_tab(url)
+    client.stopListening()
+    client.logout()
+    tk.messagebox.showinfo(title='Info', message='Logged Out')
+    msglist.delete(0,END)
+    frame.pack_forget()
+    showAll()
+    btn_login["state"] = "normal"
     
 saveStatus = tk.IntVar()
 if savedSaveOption == True:
@@ -194,7 +226,7 @@ btn_sign_up.place(x=270, y=330)
 
 labelText = tk.StringVar()
 depositLabel = tk.Label(window, textvariable=labelText)
-depositLabel.place(x=0,y=380)
+depositLabel.place(x=0,y=430)
 pl = PrintLogger(labelText)
 sys.stdout = pl
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -202,12 +234,22 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 frame = tk.Frame(window)
 frame.pack()
 
-msglist = tk.Listbox(frame, width = 40, height = 10)
-msglist.pack(side="left", fill="y")
+msglist = tk.Listbox(frame, width = 45, height = 10)
 
-scrollbar = tk.Scrollbar(frame, orient="vertical")
-scrollbar.config(command=msglist.yview)
-scrollbar.pack(side="right", fill="y")
+scrollbary = tk.Scrollbar(frame, orient="vertical")
+scrollbary.config(command=msglist.yview)
+
+scrollbarx = tk.Scrollbar(frame, orient="horizontal")
+scrollbarx.config(command=msglist.xview)
+
+DNDStatus = tk.IntVar()
+ckb_save_usr_info = tk.Checkbutton(frame, text = "DND mode", variable = DNDStatus)
+
+ckb_save_usr_info.pack(side="bottom")
+scrollbarx.pack(side="bottom", fill="x")
+msglist.pack(side="left", fill="y")
+scrollbary.pack(side="right", fill="y")
+
 
 
 
@@ -234,7 +276,12 @@ def hideAll():
     label_email.place_forget()
     label_pwd.place_forget()
     btn_logout.pack(side="right")
-    
-    
-window.mainloop()
 
+threading.Thread(target=lambda:(
+    langid.classify("This is a test"),
+    langid.classify("測試"))).start()
+window.mainloop()
+if 'client' in globals() :
+    client.stopListening()
+    client.logout()
+sys.exit()

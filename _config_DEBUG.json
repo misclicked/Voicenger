@@ -1,0 +1,15 @@
+{
+    "config": [
+        {
+            "email": "example@gmail.com",
+            "password": "",
+            "save": false,
+            "DNDStr": "This user is now in DND mode."
+        }
+    ],
+    "dev": [
+        {
+            "Debug": true
+        }
+    ]
+}
