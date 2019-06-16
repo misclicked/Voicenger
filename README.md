@@ -26,6 +26,6 @@ pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
 build.bat
 ```
 # **Important**
-**Keep your config.json file private is you choice to save your password**
+**Keep your config.json file private if you choice to save your password**
 
  
