@@ -120,7 +120,7 @@ try:
             if 'DNDStr' not in data['config'][0]:
                 DNDStr = "This user is now in DND mode."
             else:
-                savedSaveOption = data['config'][0]['DNDStr']
+                DNDStr = data['config'][0]['DNDStr']
         if 'dev' not in data:
             Debug = False
         else:
@@ -134,10 +134,6 @@ except:
     savedSaveOption = False
     Debug = False
 
-if savedEmail == "":
-    savedEmail = "example@gmail.com"
-    savedPwd = ""
-    savedSaveOption = False
 # user information
 label_email = tk.Label(window, text='FB email: ')
 label_email.place(x=95, y= 250)
