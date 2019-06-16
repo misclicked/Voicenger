@@ -29,7 +29,7 @@ class PrintLogger(): # create file like object
     def flush(self): # needed for file like object
         pass
 
-def say(text):
+def say(text, name):
     with tempfile.NamedTemporaryFile(delete=True) as temp:
         ttss = []
         try:
@@ -42,7 +42,12 @@ def say(text):
             try:
                 ttss.append(gTTS(text))
             except:
-                ttss.append(gTTS('訊息太長，無法產生語音', 'zh-tw'))
+                langName = langid.classify(name)[0]
+                if langName == 'zh':
+                    if langName == 'zh':
+                        langName = 'zh-tw'
+                ttss.append(gTTS(name, langName))
+                ttss.append(gTTS('傳送了一則非文字訊息', 'zh-tw'))
         filename = "{}.mp3".format(temp.name)
         with open(filename, 'wb') as fp:
             for tts in ttss:
@@ -69,7 +74,7 @@ class EchoBot(Client):
                 page = requests.get('https://www.facebook.com/'+author_id, cookies = self.session)
                 name = BeautifulSoup(page.text, "lxml").title.string;
                 self.idName[author_id] = name
-            say(text)
+            say(text, name)
             try:
                 self.msglist.insert(END, name+": "+text)
             except Exception as ex:
