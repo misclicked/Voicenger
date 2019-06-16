@@ -3,7 +3,7 @@ from gtts import gTTS
 import tempfile
 import playsound
 import langid
-from fbchat import Client, Message
+from fbchat import Client, Message, ThreadType
 from bs4 import BeautifulSoup
 import requests
 import tkinter as tk
@@ -51,7 +51,7 @@ def say(text):
                     tts.write_to_fp(fp)
                 except:
                     ttss.append(gTTS('訊息太長，無法產生語音', 'zh-tw'))
-        playsound.playsound(filename, False);
+        playsound.playsound(filename, True);
 
 # Subclass fbchat.Client and override required methods
 class EchoBot(Client):
@@ -74,8 +74,8 @@ class EchoBot(Client):
                 self.msglist.insert(END, name+": "+text)
             except Exception as ex:
                 self.msglist.insert(END, name+": 訊息包含不支援之符號")
-            if DNDStatus.get():
-                self.send(Message(text=DNDStr), thread_id=thread_id, thread_type=thread_type)
+            if DNDStatus.get() and thread_type is not ThreadType.GROUP:
+                self.send(Message(text="Auto reply: "+DNDStr), thread_id=thread_id, thread_type=thread_type)
 
             self.msglist.yview(END)
         else:
