@@ -55,14 +55,14 @@ def say(text, name):
                     tts._tokenize = lambda text: [text]
                     tts.write_to_fp(fp)
                 except:
-                    ttss.append(gTTS('訊息太長，無法產生語音', 'zh-tw'))
+                    ttss.append(gTTS('傳送了一則非文字訊息', 'zh-tw'))
         playsound.playsound(filename, True);
 
 # Subclass fbchat.Client and override required methods
 class EchoBot(Client):
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
         self.markAsDelivered(thread_id, message_object.uid)
-        self.markAsRead(thread_id)
+        #self.markAsRead(thread_id)
 
         text = message_object.text
         if text == "":
