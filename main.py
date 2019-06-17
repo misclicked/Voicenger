@@ -12,7 +12,6 @@ from PIL import ImageTk
 import webbrowser
 import tkinter.messagebox
 from tkinter import END
-import threading
 import logging
 import sys
 import json
@@ -56,10 +55,14 @@ def say(text, name):
                     tts.write_to_fp(fp)
                 except:
                     ttss.append(gTTS('傳送了一則非文字訊息', 'zh-tw'))
-        playsound.playsound(filename, True);
+        playsound.playsound(filename, True)
 
 # Subclass fbchat.Client and override required methods
-class EchoBot(Client):
+class VoiceBot(Client):
+    Debug = False
+    idName = {}
+    session = None
+    msglist = None
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
         self.markAsDelivered(thread_id, message_object.uid)
         #self.markAsRead(thread_id)
@@ -72,7 +75,7 @@ class EchoBot(Client):
                 name = self.idName[author_id]
             else:
                 page = requests.get('https://www.facebook.com/'+author_id, cookies = self.session)
-                name = BeautifulSoup(page.text, "lxml").title.string;
+                name = BeautifulSoup(page.text, "lxml").title.string
                 self.idName[author_id] = name
             say(text, name)
             try:
@@ -163,7 +166,7 @@ def usr_login():
         try:
             email = var_usr_name.get()
             pwd = entry_usr_pwd.get()
-            client = EchoBot(email, pwd)
+            client = VoiceBot(email, pwd)
             client.session = client.getSession()
             client.idName = {}
             client.msglist = msglist
