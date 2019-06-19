@@ -17,6 +17,7 @@ import logging
 import sys
 import json
 import threading
+import clipboard
 
 class PrintLogger(): # create file like object
     def __init__(self, labelText): # pass reference to text widget
@@ -95,7 +96,7 @@ class VoiceBot(Client):
                 self.msglist.insert(END, name+": 訊息包含不支援之符號")
             if DNDStatus.get() and thread_type is not ThreadType.GROUP:
                 self.send(Message(text="Auto reply: "+DNDStr), thread_id=thread_id, thread_type=thread_type)
-            self.msglist.data.append([thread_id, thread_type, name])
+            self.msglist.data.append([thread_id, thread_type, name, message_object.text])
             self.msglist.yview(END)
         else:
             if(message_object.text == 'Logout'):
@@ -254,7 +255,8 @@ def onSelect(evt):
     w = evt.widget
     index = int(w.curselection()[0])
     value = w.get(index)
-    print(f'You selected item {w.data[index]}')
+    clipboard.copy(w.data[index][3])
+    print(f'You selected item {value}, message copied to clipboard')
     #threading.Thread(target = lambda :client.send(Message(text="test"), thread_id=w.data[index][0], thread_type=w.data[index][1])).start()
 
 
