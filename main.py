@@ -1,5 +1,6 @@
 # coding=utf-8
 from gtts import gTTS
+import re
 import tempfile
 import playsound
 import langid
@@ -29,24 +30,35 @@ class PrintLogger(): # create file like object
         pass
 
 def say(text, name):
+    regex = re.compile(
+        r'^(?:http|ftp)s?://' # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' #domain...
+        r'localhost|' #localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+        r'(?::\d+)?' # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
     with tempfile.NamedTemporaryFile(delete=True) as temp:
         ttss = []
-        try:
-            lang = langid.classify(text)[0]
-            if lang == 'zh':
-                if lang == 'zh':
-                    lang = 'zh-tw'
-            ttss.append(gTTS(text,lang))
-        except:
+        langName = langid.classify(name)[0]
+        if langName == 'zh':
+            if langName == 'zh':
+                langName = 'zh-tw'
+        if re.match(regex, text) is not None:
+            ttss.append(gTTS(name, langName))
+            ttss.append(gTTS('傳送了一個連結', 'zh-tw'))
+        else:
             try:
-                ttss.append(gTTS(text))
+                lang = langid.classify(text)[0]
+                if lang == 'zh':
+                    if lang == 'zh':
+                        lang = 'zh-tw'
+                ttss.append(gTTS(text,lang))
             except:
-                langName = langid.classify(name)[0]
-                if langName == 'zh':
-                    if langName == 'zh':
-                        langName = 'zh-tw'
-                ttss.append(gTTS(name, langName))
-                ttss.append(gTTS('傳送了一則非文字訊息', 'zh-tw'))
+                try:
+                    ttss.append(gTTS(text))
+                except:
+                    ttss.append(gTTS(name, langName))
+                    ttss.append(gTTS('傳送了一則非文字訊息', 'zh-tw'))
         filename = "{}.mp3".format(temp.name)
         with open(filename, 'wb') as fp:
             for tts in ttss:
@@ -54,7 +66,7 @@ def say(text, name):
                     tts._tokenize = lambda text: [text]
                     tts.write_to_fp(fp)
                 except:
-                    ttss.append(gTTS('傳送了一則非文字訊息', 'zh-tw'))
+                    ttss.append(gTTS('ERROR', 'zh-tw'))
         playsound.playsound(filename, True)
 
 # Subclass fbchat.Client and override required methods
@@ -66,7 +78,6 @@ class VoiceBot(Client):
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
         self.markAsDelivered(thread_id, message_object.uid)
         #self.markAsRead(thread_id)
-
         text = message_object.text
         if text == "":
             return
@@ -84,7 +95,7 @@ class VoiceBot(Client):
                 self.msglist.insert(END, name+": 訊息包含不支援之符號")
             if DNDStatus.get() and thread_type is not ThreadType.GROUP:
                 self.send(Message(text="Auto reply: "+DNDStr), thread_id=thread_id, thread_type=thread_type)
-
+            self.msglist.data.append([thread_id, thread_type, name])
             self.msglist.yview(END)
         else:
             if(message_object.text == 'Logout'):
@@ -169,6 +180,7 @@ def usr_login():
             client = VoiceBot(email, pwd)
             client.session = client.getSession()
             client.idName = {}
+            msglist.data = []
             client.msglist = msglist
             client.Debug = Debug
             hideAll()
@@ -238,7 +250,16 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 frame = tk.Frame(window)
 frame.pack()
 
+def onSelect(evt):
+    w = evt.widget
+    index = int(w.curselection()[0])
+    value = w.get(index)
+    print(f'You selected item {w.data[index]}')
+    #threading.Thread(target = lambda :client.send(Message(text="test"), thread_id=w.data[index][0], thread_type=w.data[index][1])).start()
+
+
 msglist = tk.Listbox(frame, width = 45, height = 10)
+msglist.bind('<<ListboxSelect>>', onSelect)
 
 scrollbary = tk.Scrollbar(frame, orient="vertical")
 scrollbary.config(command=msglist.yview)
