@@ -68,7 +68,7 @@ def say(text, name):
                     tts.write_to_fp(fp)
                 except:
                     ttss.append(gTTS('ERROR', 'zh-tw'))
-        return threading.Thread(target = lambda :playsound.playsound(filename, True))
+        playsound.playsound(filename, True)
 
 
 # Subclass fbchat.Client and override required methods
@@ -90,17 +90,16 @@ class VoiceBot(Client):
                 page = requests.get('https://www.facebook.com/'+author_id, cookies = self.session)
                 name = BeautifulSoup(page.text, "lxml").title.string
                 self.idName[author_id] = name
-            self.sayThread = say(text, name)
-            self.sayThread.start()
             try:
                 self.msglist.insert(END, name+": "+text)
             except Exception as ex:
                 self.msglist.insert(END, name+": 訊息包含不支援之符號")
-            if DNDStatus.get() and thread_type is not ThreadType.GROUP:
-                self.send(Message(text="Auto reply: "+DNDStr), thread_id=thread_id, thread_type=thread_type)
+            say(text, name)
+            if author_id != self.uid or text != "Auto reply: "+DNDStr:
+                if DNDStatus.get() and thread_type is not ThreadType.GROUP:
+                    self.send(Message(text="Auto reply: "+DNDStr), thread_id=thread_id, thread_type=thread_type)
             self.msglist.data.append([thread_id, thread_type, name, message_object.text])
             self.msglist.yview(END)
-            self.sayThread.wait()
         else:
             if(message_object.text == 'Logout'):
                 self.logout()
